@@ -11,6 +11,7 @@ import random
 import string
 import uuid
 from decimal import Decimal, InvalidOperation
+from tabnanny import verbose
 
 from babel.numbers import get_currency_symbol
 from django.conf import settings
@@ -27,18 +28,18 @@ from appointment.utils.date_time import convert_minutes_in_human_readable_format
 from appointment.utils.view_helpers import generate_random_id, get_locale
 
 PAYMENT_TYPES = (
-    ('full', _('Full payment')),
-    ('down', _('Down payment')),
+    ('full', _('Pełna płatność')),
+    ('down', _('Zadatek')),
 )
 
 DAYS_OF_WEEK = (
-    (0, 'Sunday'),
-    (1, 'Monday'),
-    (2, 'Tuesday'),
-    (3, 'Wednesday'),
-    (4, 'Thursday'),
-    (5, 'Friday'),
-    (6, 'Saturday'),
+    (0, 'Niedziela'),
+    (1, 'Poniedziałek'),
+    (2, 'Wtorek'),
+    (3, 'Środa'),
+    (4, 'Czwartek'),
+    (5, 'Piątek'),
+    (6, 'Sobota'),
 )
 
 
@@ -65,15 +66,15 @@ class Service(models.Model):
     Version: 1.1.0
     Since: 1.0.0
     """
-    name = models.CharField(max_length=100, blank=False)
-    description = models.TextField(blank=True, null=True)
-    duration = models.DurationField(validators=[MinValueValidator(datetime.timedelta(seconds=1))])
-    price = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(0)])
-    down_payment = models.DecimalField(max_digits=6, decimal_places=2, default=0, validators=[MinValueValidator(0)])
-    image = models.ImageField(upload_to='services/', blank=True, null=True)
-    currency = models.CharField(max_length=3, default='USD', validators=[MaxLengthValidator(3), MinLengthValidator(3)])
-    background_color = models.CharField(max_length=50, null=True, blank=True, default=generate_rgb_color)
-    reschedule_limit = models.PositiveIntegerField(
+    name = models.CharField(verbose_name="Nazwa", max_length=100, blank=False)
+    description = models.TextField(verbose_name="Opis", blank=True, null=True)
+    duration = models.DurationField(verbose_name="Czas trwania", validators=[MinValueValidator(datetime.timedelta(seconds=1))])
+    price = models.DecimalField(verbose_name="Cena", max_digits=8, decimal_places=2, validators=[MinValueValidator(0)])
+    down_payment = models.DecimalField(verbose_name="Zadatek", max_digits=6, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+    image = models.ImageField(verbose_name="Zdjęcie", upload_to='services/', blank=True, null=True)
+    currency = models.CharField(verbose_name="Waluta", max_length=3, default='USD', validators=[MaxLengthValidator(3), MinLengthValidator(3)])
+    background_color = models.CharField(verbose_name="Kolor tła", max_length=50, null=True, blank=True, default=generate_rgb_color)
+    reschedule_limit = models.PositiveIntegerField(verbose_name="Limit przepotwierdzen",
         default=0,
         help_text=_("Maximum number of times an appointment can be rescheduled.")
     )
@@ -83,8 +84,8 @@ class Service(models.Model):
     )
 
     # meta data
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(verbose_name="Data stworzenia", auto_now_add=True)
+    updated_at = models.DateTimeField(verbose_name="Data aktualizacji", auto_now=True)
 
     def __str__(self):
         return self.name
@@ -160,33 +161,33 @@ class Service(models.Model):
 
 
 class StaffMember(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    services_offered = models.ManyToManyField(Service)
-    slot_duration = models.PositiveIntegerField(
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, verbose_name="Lekarz",  on_delete=models.CASCADE)
+    services_offered = models.ManyToManyField(Service, verbose_name="Usługi")
+    slot_duration = models.PositiveIntegerField(verbose_name="Czas trwania",
         null=True, blank=True,
         help_text=_("Minimum time for an appointment in minutes, recommended 30.")
     )
-    lead_time = models.TimeField(
+    lead_time = models.TimeField(verbose_name="Godzina startu pracy",
         null=True, blank=True,
         help_text=_("Time when the staff member starts working.")
     )
-    finish_time = models.TimeField(
+    finish_time = models.TimeField(verbose_name="Godzina końca pracy",
         null=True, blank=True,
         help_text=_("Time when the staff member stops working.")
     )
-    appointment_buffer_time = models.FloatField(
+    appointment_buffer_time = models.FloatField(verbose_name="Bufor przed nowymi wizytami",
         blank=True, null=True,
         help_text=_("Time between now and the first available slot for the current day (doesn't affect tomorrow). "
                     "e.g: If you start working at 9:00 AM and the current time is 8:30 AM and you set it to 30 "
                     "minutes, the first available slot will be at 9:00 AM. If you set the appointment buffer time to "
                     "60 minutes, the first available slot will be at 9:30 AM.")
     )
-    work_on_saturday = models.BooleanField(default=False)
-    work_on_sunday = models.BooleanField(default=False)
+    work_on_saturday = models.BooleanField(verbose_name="Praca w sobote", default=False)
+    work_on_sunday = models.BooleanField(verbose_name="Praca w niedziele", default=False)
 
     # meta data
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(verbose_name="Stworzony w dniu", auto_now_add=True)
+    updated_at = models.DateTimeField(verbose_name="Zaktualizowany w dniu", auto_now=True)
 
     def __str__(self):
         return f"{self.get_staff_member_name()}"
@@ -283,14 +284,14 @@ class AppointmentRequest(models.Model):
     Author: Adams Pierre David
     Since: 1.0.0
     """
-    date = models.DateField()
-    start_time = models.TimeField()
-    end_time = models.TimeField()
-    service = models.ForeignKey(Service, on_delete=models.CASCADE)
-    staff_member = models.ForeignKey(StaffMember, on_delete=models.SET_NULL, null=True)
-    payment_type = models.CharField(max_length=4, choices=PAYMENT_TYPES, default='full')
+    date = models.DateField(verbose_name="Data")
+    start_time = models.TimeField(verbose_name="Czas startu")
+    end_time = models.TimeField(verbose_name="Czas końca")
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, verbose_name="Usługa")
+    staff_member = models.ForeignKey(StaffMember, on_delete=models.SET_NULL, null=True, verbose_name="Lekarz")
+    payment_type = models.CharField(max_length=4, choices=PAYMENT_TYPES, default='full', verbose_name="Rodzaj płatności")
     id_request = models.CharField(max_length=100, blank=True, null=True)
-    reschedule_attempts = models.PositiveIntegerField(default=0)
+    reschedule_attempts = models.PositiveIntegerField(default=0, verbose_name="Liczba przeplanowania")
 
     # meta data
     created_at = models.DateTimeField(auto_now_add=True)
